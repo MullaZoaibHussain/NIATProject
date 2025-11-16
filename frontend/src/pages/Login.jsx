@@ -1,57 +1,35 @@
-import axios from "axios";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API_URL } from "../config";
 
-function Login() {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [err, setErr] = useState("");
 
-  const loginUser = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
-
+      const res = await axios.post(`${API_URL}/api/auth/login`, { email, password });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("name", res.data.name);
       localStorage.setItem("role", res.data.role);
-
-      navigate("/dashboard");
-    } catch {
-      alert("Invalid credentials");
+      window.location.href = "/dashboard";
+    } catch (error) {
+      setErr("Invalid credentials");
     }
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: "500px" }}>
-      <h2 className="text-center mb-4">Login</h2>
-
-      <form className="card p-4 shadow" onSubmit={loginUser}>
-        <input
-          className="form-control mb-3"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          className="form-control mb-3"
-          placeholder="Password"
-          type="password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button className="btn btn-primary w-100">Login</button>
-
-        <p className="text-center mt-3">
-          No account? <Link to="/register">Register</Link>
-        </p>
+    <div className="container" style={{ maxWidth: 480, marginTop: 60 }}>
+      <h2 className="mb-4 text-center">Login</h2>
+      {err && <div className="alert alert-danger">{err}</div>}
+      <form onSubmit={handleLogin}>
+        <input className="form-control mb-3" type="email" placeholder="Email" onChange={e=>setEmail(e.target.value)} required />
+        <input className="form-control mb-3" type="password" placeholder="Password" onChange={e=>setPassword(e.target.value)} required />
+        <button className="btn btn-dark w-100">Login</button>
       </form>
+      <p className="mt-3 text-center">Don't have an account? <a href="/register">Register</a></p>
     </div>
   );
 }
-
-export default Login;

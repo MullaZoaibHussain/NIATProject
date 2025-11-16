@@ -1,128 +1,88 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API_URL } from "../config";
 
-function Dashboard() {
+function statusBadge(status) {
+  const map = {
+    open: "bg-warning text-dark",
+    in_progress: "bg-info text-dark",
+    resolved: "bg-success text-white",
+    closed: "bg-secondary text-white"
+  };
+  return map[status] || "bg-light text-dark";
+}
+
+export default function Dashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
   const name = localStorage.getItem("name");
-
-  if (!token) navigate("/");
-
-  const loadData = async () => {
-    setLoading(true);
-    const res = await axios.get("http://localhost:5000/api/tickets", {
-      headers: { Authorization: "Bearer " + token },
-    });
-    setTickets(res.data);
-    setLoading(false);
-  };
+  const role = localStorage.getItem("role");
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    loadData();
+    if (!token) return (window.location.href = "/");
+    axios.get(`${API_URL}/api/tickets`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => setTickets(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
-
-  const updateStatus = async (id, status) => {
-    await axios.post(
-      "http://localhost:5000/api/tickets/" + id + "/status",
-      { status },
-      { headers: { Authorization: "Bearer " + token } }
-    );
-    loadData();
-  };
 
   const logout = () => {
     localStorage.clear();
-    navigate("/");
+    window.location.href = "/";
   };
-
-  if (loading)
-    return (
-      <div className="text-center mt-5">
-        <div className="spinner-border text-primary"></div>
-        <p>Loading tickets...</p>
-      </div>
-    );
 
   return (
     <div className="container mt-4">
-      <h2>Welcome, {name}</h2>
-
-      <div className="d-flex justify-content-between mb-3">
+      <div className="d-flex justify-content-between align-items-center">
+        <h2>Welcome, {name}</h2>
         <div>
-          <Link to="/create-ticket" className="btn btn-primary me-2">
-            + Create Ticket
-          </Link>
-
-          {role === "admin" && (
-            <Link to="/analytics" className="btn btn-secondary">
-              Analytics
-            </Link>
-          )}
+          {role === "admin" && <a href="/analytics" className="btn btn-outline-primary me-2">Analytics</a>}
+          <button className="btn btn-danger" onClick={logout}>Logout</button>
         </div>
-
-        <button className="btn btn-danger" onClick={logout}>
-          Logout
-        </button>
       </div>
 
-      <div className="card p-3 shadow">
-        <h4>Your Tickets</h4>
-        <hr />
+      <a className="btn btn-primary mt-3" href="/create-ticket">+ Create Ticket</a>
 
-        {tickets.length === 0 && <p>No tickets found.</p>}
+      <h3 className="mt-4">Your Tickets</h3>
 
-        {tickets.map((t) => (
-          <div key={t._id} className="border p-3 mb-3 rounded">
-            <h5>
-              {t.title} ({t.ticketId})
-            </h5>
+      {loading ? <div className="mt-4">Loading...</div> : (
+        tickets.length === 0 ? <div className="mt-3">No tickets yet.</div> :
+        tickets.map(t => (
+          <div className="card p-3 my-3" key={t._id}>
+            <div className="d-flex justify-content-between">
+              <h5>{t.title} <small>({t.ticketNumber})</small></h5>
+              <span className={`badge ${statusBadge(t.status)}`}>{t.status}</span>
+            </div>
             <p>{t.description}</p>
-
-            <p>
-              <b>Status:</b>{" "}
-              <span
-                className={`badge ${
-                  t.status === "resolved"
-                    ? "bg-success"
-                    : t.status === "in-progress"
-                    ? "bg-primary"
-                    : "bg-warning text-dark"
-                }`}
-              >
-                {t.status}
-              </span>
-            </p>
-
-            <p><b>Category:</b> {t.category}</p>
-            <p><b>Priority:</b> {t.priority}</p>
-            <p><b>Department:</b> {t.department}</p>
-
+            <p><b>Category:</b> {t.category} &nbsp; <b>Priority:</b> {t.priority} &nbsp; <b>Department:</b> {t.department}</p>
             {role === "admin" && (
-              <div>
-                <button
-                  className="btn btn-success btn-sm me-2"
-                  onClick={() => updateStatus(t._id, "resolved")}
+              <div className="mt-2">
+                <select
+                  defaultValue={t.status}
+                  className="form-select form-select-sm"
+                  style={{ width: 200 }}
+                  onChange={async (e) => {
+                    try {
+                      await axios.post(`${API_URL}/api/tickets/${t._id}/status`, { status: e.target.value }, { headers: { Authorization: `Bearer ${token}` }});
+                      // refresh
+                      const res = await axios.get(`${API_URL}/api/tickets`, { headers: { Authorization: `Bearer ${token}` }});
+                      setTickets(res.data);
+                    } catch (err) {
+                      alert("Status update failed");
+                    }
+                  }}
                 >
-                  Mark Resolved
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => updateStatus(t._id, "in-progress")}
-                >
-                  In Progress
-                </button>
+                  <option value="open">open</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="resolved">resolved</option>
+                  <option value="closed">closed</option>
+                </select>
               </div>
             )}
           </div>
-        ))}
-      </div>
+        ))
+      )}
     </div>
   );
 }
-
-export default Dashboard;

@@ -1,65 +1,41 @@
-import axios from "axios";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API_URL } from "../config";
 
-function Register() {
+export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const registerUser = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-
+    setErr("");
+    setLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", {
-        name,
-        email,
-        password,
-      });
-
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("name", res.data.name);
-      localStorage.setItem("role", res.data.role);
-
-      navigate("/dashboard");
-    } catch {
-      alert("Registration failed");
+      await axios.post(`${API_URL}/api/auth/register`, { name, email, password });
+      window.location.href = "/";
+    } catch (error) {
+      setErr(error?.response?.data?.error || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: "500px" }}>
-      <h2 className="text-center mb-4">Register</h2>
-
-      <form className="card p-4 shadow" onSubmit={registerUser}>
-        <input
-          className="form-control mb-3"
-          placeholder="Full Name"
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <input
-          className="form-control mb-3"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          className="form-control mb-3"
-          placeholder="Password"
-          type="password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button className="btn btn-success w-100">Register</button>
-
-        <p className="text-center mt-3">
-          Already registered? <Link to="/">Login</Link>
-        </p>
+    <div className="container" style={{ maxWidth: 480, marginTop: 40 }}>
+      <h2 className="mb-4 text-center">Register</h2>
+      {err && <div className="alert alert-danger">{err}</div>}
+      <form onSubmit={handleRegister}>
+        <input className="form-control mb-3" placeholder="Name" onChange={e=>setName(e.target.value)} required />
+        <input className="form-control mb-3" type="email" placeholder="Email" onChange={e=>setEmail(e.target.value)} required />
+        <input className="form-control mb-3" type="password" placeholder="Password" onChange={e=>setPassword(e.target.value)} required />
+        <button className="btn btn-dark w-100" disabled={loading}>
+          {loading ? "Registering..." : "Register"}
+        </button>
       </form>
+      <p className="mt-3 text-center">Already have an account? <a href="/">Login</a></p>
     </div>
   );
 }
-
-export default Register;

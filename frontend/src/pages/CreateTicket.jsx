@@ -1,64 +1,39 @@
-import axios from "axios";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API_URL } from "../config";
 
-function CreateTicket() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+const DEPARTMENTS = ["IT","Admin","Hostel","Transport","Academics"];
+
+export default function CreateTicket() {
+  const [title,setTitle] = useState("");
+  const [description,setDescription] = useState("");
   const [department, setDepartment] = useState("IT");
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const token = localStorage.getItem("token");
 
-  const submitTicket = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     try {
-      await axios.post(
-        "http://localhost:5000/api/tickets",
-        { title, description, department },
-        { headers: { Authorization: "Bearer " + token } }
-      );
-
-      alert("Ticket created!");
-      navigate("/dashboard");
+      await axios.post(`${API_URL}/api/tickets`, { title, description, department }, { headers: { Authorization: `Bearer ${token}` }});
+      window.location.href = "/dashboard";
     } catch (err) {
-      alert("Failed to create ticket");
-    }
+      alert("Error creating ticket");
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: "600px" }}>
-      <h2 className="mb-4 text-center">Create Ticket</h2>
-
-      <form className="card p-4 shadow" onSubmit={submitTicket}>
-        <input
-          className="form-control mb-3"
-          placeholder="Issue Title"
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <textarea
-          className="form-control mb-3"
-          placeholder="Describe issue"
-          rows={4}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-
-        <select
-          className="form-control mb-3"
-          onChange={(e) => setDepartment(e.target.value)}
-        >
-          <option value="IT">IT Department</option>
-          <option value="Admin">Administration</option>
-          <option value="Academics">Academics</option>
-          <option value="Transport">Transport</option>
-          <option value="Hostel">Hostel</option>
+    <div className="container mt-4" style={{ maxWidth: 800 }}>
+      <h2>Create Ticket</h2>
+      <form onSubmit={submit}>
+        <input className="form-control mb-3" placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} required />
+        <textarea className="form-control mb-3" placeholder="Describe the issue" value={description} onChange={e=>setDescription(e.target.value)} required />
+        <select className="form-select mb-3" value={department} onChange={e=>setDepartment(e.target.value)}>
+          {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
-
-        <button className="btn btn-primary w-100">Submit Ticket</button>
+        <button className="btn btn-dark" disabled={loading}>{loading ? "Submitting..." : "Submit"}</button>
       </form>
     </div>
   );
 }
-
-export default CreateTicket;

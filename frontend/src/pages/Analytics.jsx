@@ -1,66 +1,44 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "../config";
 
-function Analytics() {
+export default function Analytics() {
+  const [summary, setSummary] = useState(null);
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
-
-  const [stats, setStats] = useState(null);
-
-  const loadStats = async () => {
-    const res = await axios.get("http://localhost:5000/api/tickets", {
-      headers: { Authorization: "Bearer " + token },
-    });
-
-    const data = res.data;
-
-    setStats({
-      total: data.length,
-      open: data.filter((t) => t.status === "open").length,
-      progress: data.filter((t) => t.status === "in-progress").length,
-      resolved: data.filter((t) => t.status === "resolved").length,
-      categories: data.reduce((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + 1;
-        return acc;
-      }, {}),
-    });
-  };
 
   useEffect(() => {
-    if (role !== "admin") return;
-    loadStats();
+    if (!token) return (window.location.href = "/");
+    (async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/tickets/analytics/summary`, { headers: { Authorization: `Bearer ${token}` }});
+        setSummary(res.data);
+      } catch (err) {
+        console.log(err);
+      }
+    })();
   }, []);
 
-  if (!stats)
-    return (
-      <div className="text-center mt-5">
-        <div className="spinner-border text-primary"></div>
-      </div>
-    );
+  if (!summary) return <div className="container mt-4">Loading...</div>;
 
   return (
     <div className="container mt-4">
-      <h2>Admin Analytics</h2>
-      <hr />
+      <h2>Analytics</h2>
+      <p><b>Total Tickets:</b> {summary.total}</p>
 
-      <div className="card p-3 shadow mb-4">
-        <h4>Overview</h4>
-        <p>Total Tickets: {stats.total}</p>
-        <p>Open: {stats.open}</p>
-        <p>In Progress: {stats.progress}</p>
-        <p>Resolved: {stats.resolved}</p>
-      </div>
-
-      <div className="card p-3 shadow">
-        <h4>Category Breakdown</h4>
-        {Object.keys(stats.categories).map((c) => (
-          <p key={c}>
-            {c}: {stats.categories[c]}
-          </p>
-        ))}
+      <div className="row">
+        <div className="col-md-6">
+          <h5>By Status</h5>
+          <ul>
+            {summary.byStatus.map(s => <li key={s._id}>{s._id}: {s.count}</li>)}
+          </ul>
+        </div>
+        <div className="col-md-6">
+          <h5>By Department</h5>
+          <ul>
+            {summary.byDepartment.map(d => <li key={d._id}>{d._id}: {d.count}</li>)}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
-
-export default Analytics;

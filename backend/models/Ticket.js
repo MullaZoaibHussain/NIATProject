@@ -1,32 +1,15 @@
 const mongoose = require("mongoose");
 
-const TicketSchema = new mongoose.Schema(
-  {
-    ticketId: { type: String, unique: true }, // Auto Ticket Number
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    category: String,
-    priority: String,
-    department: String,
-    aiResult: Object,
-    status: { type: String, default: "open" }
-  },
-  { timestamps: true }
-);
-
-// Auto-generate Ticket Number
-TicketSchema.pre("save", function (next) {
-  if (!this.ticketId) {
-    const date = new Date();
-    const stamp =
-      date.getFullYear().toString() +
-      (date.getMonth() + 1).toString().padStart(2, "0") +
-      date.getDate().toString().padStart(2, "0");
-
-    this.ticketId = `TKT-${stamp}-${Math.floor(1000 + Math.random() * 9000)}`;
-  }
-  next();
-});
+const TicketSchema = new mongoose.Schema({
+  ticketNumber: { type: String, required: true, unique: true },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  title: { type: String, required: true },
+  description: { type: String },
+  category: { type: String, default: "General" },
+  priority: { type: String, default: "medium" },
+  department: { type: String, default: "Admin" },
+  status: { type: String, enum: ["open","in_progress","resolved","closed"], default: "open" },
+  aiResult: { type: Object, default: {} }
+}, { timestamps: true });
 
 module.exports = mongoose.model("Ticket", TicketSchema);
